@@ -26,6 +26,9 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import retrofit2.Retrofit;
 
 
@@ -91,8 +94,6 @@ public class TodayWeatherFragment extends Fragment {
     }
 
 
-
-
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -100,44 +101,77 @@ public class TodayWeatherFragment extends Fragment {
     }
 
     private void getWeatherInformation() {
-        compositeDisposable.add(mService.getWeatherByLatLag(String.valueOf(common.current_location.getLatitude()),
-                String.valueOf(common.current_location.getLongitude()),
-                common.API_ID,
-                "metric")
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<WeatherResult>() {
-                    @Override
-                    public void accept(WeatherResult weatherResult) throws Exception {
-                        Picasso.get().load(new StringBuilder("https://openweathermap.org/img/wn/")
+        IOpenWeatherMap iOpenWeatherMap = RetrofitClient.getInstance().create(IOpenWeatherMap.class);
+        Call<WeatherResult> weatherResultCall = iOpenWeatherMap.getWeatherResult();
+
+        weatherResultCall.enqueue(new Callback<WeatherResult>() {
+            @Override
+            public void onResponse(Call<WeatherResult> call, Response<WeatherResult> response) {
+              WeatherResult weatherResult = response.body();
+               // System.out.println("connect with " + weatherResult);
+                Picasso.get().load(new StringBuilder("https://openweathermap.org/img/w/")
                                 .append(weatherResult.getWeather().get(0).getIcon())
                                 .append(".png").toString()).into(img_weather);
 
                         txt_city_name.setText(weatherResult.getName());
-                        txt_description.setText(new StringBuilder("Weather in")
-                                .append(weatherResult.getName()).toString());
-                        txt_temperature.setText(new StringBuilder(String.valueOf(weatherResult.getMain().getTemp())).append("°C").toString());
+                        txt_description.setText("Weather in " + weatherResult.getName());
+                        txt_temperature.setText(weatherResult.getMain().getTemp() + "°F");
                         txt_date_time.setText(common.convertUnixToDate(weatherResult.getDt()));
-                        txt_pressure.setText(new StringBuilder(String.valueOf(weatherResult.getMain().getPressure())).append(" hpa").toString());
-                        txt_humidity.setText(new StringBuilder(String.valueOf(weatherResult.getMain().getHumidity())).append(" %").toString());
+                        txt_pressure.setText(weatherResult.getMain().getPressure() + " hpa");
+                        txt_humidity.setText(weatherResult.getMain().getHumidity() + " %");
                         txt_sunrise.setText(common.convertUnixToHour(weatherResult.getSys().getSunrise()));
                         txt_sunset.setText(common.convertUnixToHour(weatherResult.getSys().getSunset()));
-                        txt_geo_coords.setText(new StringBuilder("[").append(weatherResult.getCoord().toString()).append("]").toString());
-
+                        txt_geo_coords.setText("[" + weatherResult.getCoord().toString() + "]");
+                        txt_wind.setText(String.valueOf(weatherResult.getWind().getSpeed()));
 
                         weather_panel.setVisibility(View.VISIBLE);
                         loading.setVisibility(View.GONE);
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        Toast.makeText(getActivity(), "" + throwable.getMessage(),
-                                Toast.LENGTH_LONG).show();
+            }
 
-                    }
-                })
+            @Override
+            public void onFailure(Call<WeatherResult> call, Throwable t) {
+                System.out.println("failed " +t.getMessage());
+            }
+        });
 
-        );
+//        compositeDisposable.add(mService.getWeatherByLatLag(String.valueOf(common.current_location.getLatitude()),
+//                String.valueOf(common.current_location.getLongitude()),
+//                common.API_ID,
+//                "metric")
+//                .subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(new Consumer<WeatherResult>() {
+//                    @Override
+//                    public void accept(WeatherResult weatherResult) throws Exception {
+//                        Picasso.get().load(new StringBuilder("https://openweathermap.org/img/wn/")
+//                                .append(weatherResult.getWeather().get(0).getIcon())
+//                                .append(".png").toString()).into(img_weather);
+//
+//                        txt_city_name.setText(weatherResult.getName());
+//                        txt_description.setText(new StringBuilder("Weather in")
+//                                .append(weatherResult.getName()).toString());
+//                        txt_temperature.setText(new StringBuilder(String.valueOf(weatherResult.getMain().getTemp())).append("°C").toString());
+//                        txt_date_time.setText(common.convertUnixToDate(weatherResult.getDt()));
+//                        txt_pressure.setText(new StringBuilder(String.valueOf(weatherResult.getMain().getPressure())).append(" hpa").toString());
+//                        txt_humidity.setText(new StringBuilder(String.valueOf(weatherResult.getMain().getHumidity())).append(" %").toString());
+//                        txt_sunrise.setText(common.convertUnixToHour(weatherResult.getSys().getSunrise()));
+//                        txt_sunset.setText(common.convertUnixToHour(weatherResult.getSys().getSunset()));
+//                        txt_geo_coords.setText(new StringBuilder("[").append(weatherResult.getCoord().toString()).append("]").toString());
+//
+//
+//                        weather_panel.setVisibility(View.VISIBLE);
+//                        loading.setVisibility(View.GONE);
+//                    }
+//                }, new Consumer<Throwable>() {
+//                    @Override
+//                    public void accept(Throwable throwable) throws Exception {
+//                        Toast.makeText(getActivity(), "" + throwable.getMessage(),
+//                                Toast.LENGTH_LONG).show();
+//
+//                    }
+//                })
+//
+//        );
 
 
     }
